@@ -1,0 +1,25 @@
+---
+title: "Datafest"
+author: "Drew, Richard, Anmol, Meredith, An"
+date: 2023-4-7
+output:
+  github_document:
+    toc: true
+---
+
+# Question
+
+
+# Setup
+<!-- ----------------------------------------------------------------------- -->
+
+```{r setup}
+library(tidyverse)
+```
+
+# Data Cleaning
+
+```{r q1-task}
+## TODO: Give the filename for your copy of Table B01003
+
+```
