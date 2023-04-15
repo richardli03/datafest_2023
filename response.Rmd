@@ -19,7 +19,7 @@ What is the average time of response for a question plot?
 library(tidyverse)
 ```
 
-# Initial Glimpse
+# Response Times with Respect to State.
 ```{r}
 
 # questions %>%
@@ -34,36 +34,55 @@ question_filtered <- questions %>%
 question_filtered$TakenOnUtc <- as.POSIXct(question_filtered$TakenOnUtc, format = "%Y-%m-%d %H:%M:%S")
 question_filtered$AskedOnUtc <- as.POSIXct(question_filtered$AskedOnUtc, format = "%Y-%m-%d %H:%M:%S")
 
-# Replace missing values with a default datetime object
+# Replace missing values with a default datetime object -- UNNECESSARY, first filter catches all
 question_filtered$TakenOnUtc[is.na(question_filtered$TakenOnUtc)] <- as.POSIXct("1970-01-01 00:00:00", tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
 question_filtered$AskedOnUtc[is.na(question_filtered$AskedOnUtc)] <- as.POSIXct("1970-01-01 00:00:00",  tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
 
 # CLEAR VALUES THAT AREN'T FROM 2000s
-# question_filtered
+```
 
-solved <- question_filtered %>%
+```{r}
+df_response_t <- question_filtered %>%
   mutate(
-    time_to_take = difftime(TakenOnUtc,AskedOnUtc)
+    time_to_take = difftime(TakenOnUtc,AskedOnUtc, unit = "hours")
   ) %>%
   arrange(desc(time_to_take))
 
-solved
-
-solved %>%
+df_simplified <- df_response_t %>%
   summarize(
     State = StateAbbr,
     Asked_Time = AskedOnUtc,
     Taken_Time = TakenOnUtc,
-    diff = as.integer(time_to_take)
-  ) %>%
+    response_time = as.integer(time_to_take)
+  )
+
+
+df_simplified%>%
   ggplot() + 
-  geom_boxplot(aes(x = State, y = diff)) + 
+  geom_boxplot(aes(x = State, y = response_time)) + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
   scale_y_log10()
-  
+```
+
+Let's also find how response time varies with number of posts.
+
+```{r}
+df_simplified 
+
+df_response_simplified_count <- df_simplified %>%
+  group_by(State) %>%
+  summarize(
+    num = n(),
+    med_rt = median(response_time),
+    mean_rt = mean(response_time)
+  )
+
+df_response_simplified_count
 
   
-
-
+df_response_simplified_count %>%
+  ggplot(aes(x = State, y = num, fill = mean_rt))+
+  geom_bar(stat = "identity")+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
