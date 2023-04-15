@@ -17,9 +17,75 @@ output:
 library(tidyverse)
 ```
 
-# Data Cleaning
+# Initial Glimpse
 
-```{r q1-task}
-## TODO: Give the filename for your copy of Table B01003
+
+```{r initial_glimpse}
+df_attorneys <-read_csv("data/attorneys.csv") %>%
+  glimpse()
+
+df_attorney_time_entries <-read_csv("data/attorneytimeentries.csv") %>%
+  glimpse()
+
+state_sites <-read_csv("data/statesites.csv") %>%
+  glimpse()
+
+categories <-read_csv("data/categories.csv") %>%
+  glimpse()
+
+questions <-read_csv("data/questions.csv") %>%
+  glimpse()
+
+questionposts <-read_csv("data/questionposts.csv") %>%
+  glimpse()
+
+clients <-read_csv("data/clients.csv") %>%
+  glimpse()
+
+subcategories <-read_csv("data/subcategories.csv") %>%
+  glimpse()
+
+```
+
+# Some visualizations
+
+Raw number of attorneys per state
+
+```{r initial_glimpse}
+
+# clients %>%
+#   na.omit()%>%
+#   ggplot(aes(x =  StateName, y = AnnualIncome)) + 
+#   geom_boxplot()
+attorneys_count <- df_attorneys %>%
+  count(StateName)
+
+attorneys_count %>%
+  ggplot(aes(x = StateName, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+```{r}
+
+clients_count <- clients %>%
+  count(StateName)
+
+clients_count %>%
+  ggplot(aes(x = StateName, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+```
+```{r}
+questions_category_count <- questions %>%
+  count(Category)
+
+questions_category_count %>%
+  ggplot(aes(x = Category, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 ```
