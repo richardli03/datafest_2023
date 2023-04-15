@@ -8,8 +8,8 @@ library(tidytext) # for NLP
 library(stringr) # to deal with strings
 library(wordcloud) # to render wordclouds
 library(knitr) # for tables
-library(DT) # for dynamic tables
 library(tidyr)
+library(data.table)
 
 # Read in the csv file as a dataframe
 questionposts <- read.csv("~/Olin/Data Science/datafest_2023/data/questionposts.csv")
@@ -39,4 +39,23 @@ cleaned_df <- mega_df %>%
   filter(nchar(StateAbbr) == 2)
 
 posts <- cleaned_df %>% 
+  filter(Category == "Work, Employment and Unemployment") %>% 
   select("PostText", "QuestionUno") 
+
+words <- posts %>% 
+  unnest_tokens("word", "PostText") %>% 
+  dplyr::count(word, sort = TRUE) %>% 
+  ungroup()
+
+data("stop_words")
+words_clean <- words %>%
+  anti_join(stop_words)
+
+words_clean %>% head(10)
+
+words_clean %>% 
+  with(wordcloud(word, n, random.order = FALSE, max.words = 50))
+
+cleaned_df %>% 
+  filter(StateAbbr == "VI") %>% 
+  glimpse()
