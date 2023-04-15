@@ -40,3 +40,4 @@ vignettes/*.pdf
 
 data/*
 .DS_Store
+!data/.gitkeep
