@@ -40,7 +40,3 @@ cleaned_df <- mega_df %>%
 
 posts <- cleaned_df %>% 
   select("PostText", "QuestionUno") 
-
-List <- strsplit(posts$PostText, " ")
-
-words <- data.frame(Id=rep(posts$QuestionUno, sapply(List, length)), Words=unlist(List))
