@@ -9,17 +9,158 @@ output:
 
 # Question
 
-
 # Setup
+
 <!-- ----------------------------------------------------------------------- -->
 
 ```{r setup}
 library(tidyverse)
 ```
 
-# Data Cleaning
+# Initial Glimpse
 
-```{r q1-task}
-## TODO: Give the filename for your copy of Table B01003
+```{r initial_glimpse}
+df_attorneys <-read_csv("data/attorneys.csv") %>%
+  glimpse()
+
+df_attorney_time_entries <-read_csv("data/attorneytimeentries.csv") %>%
+  glimpse()
+
+state_sites <-read_csv("data/statesites.csv") %>%
+  glimpse()
+
+categories <-read_csv("data/categories.csv") %>%
+  glimpse()
+
+questions <-read_csv("data/questions.csv") %>%
+  glimpse()
+
+questionposts <-read_csv("data/questionposts.csv") %>%
+  glimpse()
+
+clients <-read_csv("data/clients.csv") %>%
+  glimpse()
+
+subcategories <-read_csv("data/subcategories.csv") %>%
+  glimpse()
+
+```
+
+# Some visualizations
+
+Raw number of attorneys per state
+
+```{r initial_glimpse}
+
+# clients %>%
+#   na.omit()%>%
+#   ggplot(aes(x =  StateName, y = AnnualIncome)) + 
+#   geom_boxplot()
+attorneys_count <- df_attorneys %>%
+  count(StateName)
+
+attorneys_count %>%
+  ggplot(aes(x = StateName, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+
+clients_count <- clients %>%
+  count(StateName)
+
+clients_count %>%
+  ggplot(aes(x = StateName, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+```
+
+```{r}
+questions_category_count <- questions %>%
+  count(Category)
+
+questions_category_count %>%
+  ggplot(aes(x = Category, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+```
+
+```{r}
+subcat_count <- questions %>%
+  count(Subcategory)%>%
+  filter(
+    n > 2000
+  ) %>%
+  glimpse()
+
+subcat_count %>%
+  ggplot(aes(x = Subcategory, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+
+```
+
+```{r}
+questions_per_state <- questionposts %>%
+  count(StateAbbr) %>%
+  filter(
+    nchar(StateAbbr) <= 2
+  ) %>%
+  glimpse()
+
+questions_per_state %>%
+  ggplot(aes(x = StateAbbr, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+fam_div_custody <- questions %>%
+  filter(
+    Subcategory == "Family/Divorce/Custody"
+  ) %>%
+  count(StateAbbr)
+  
+  
+df_combined <- rbind(data.frame(variable = questions_per_state$StateAbbr, count = questions_per_state$n, group = "questions"),
+                     data.frame(variable = fam_div_custody$StateAbbr, count = fam_div_custody$n, group = "fam_div_cust"))
+df_combined %>%
+  ggplot(aes(x = variable, y = count, fill = group)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  # facet_wrap(~ group, ncol = 2, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+```{r}
+
+ethnic_identity <- clients %>%
+  na.omit()%>%
+  mutate(
+    category_new = ifelse(grepl(",", EthnicIdentity), "Mixed", EthnicIdentity)
+    ) %>%
+  count(category_new)
+# %>%
+#   count(EthnicIdentity) %>%
+#   filter(
+#     n > 1000
+#   ) %>%
+#   glimpse()
+
+ethnic_identity
+
+ethnic_identity %>%
+  ggplot(aes(x = category_new, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+```{r}
+
+
 
 ```
