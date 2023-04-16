@@ -21,7 +21,6 @@ library(tidyverse)
 
 # Response Times with Respect to State.
 ```{r}
-
 # questions %>%
 #   glimpse()
 
@@ -90,5 +89,43 @@ df_response_simplified_count %>%
 df_response_simplified_count %>%
   ggplot(aes(x = num, y = med_rt)) +
   geom_point()
+
+```
+
+
+# ETHNICITY
+
+```{r}
+
+df_client_ethnic <- clients %>%
+  summarize(
+    ethnic_identity = EthnicIdentity,
+    "ClientUno" = ClientUno
+  ) %>%
+  glimpse()
+
+df_rt_ethnic <- df_response_t %>%
+  summarize(
+    "ClientUno" = AskedByClientUno,
+    Asked_Time = AskedOnUtc,
+    Taken_Time = TakenOnUtc,
+    response_time = as.integer(time_to_take)
+  ) %>% 
+  glimpse()
+
+df_ethnic <- inner_join(df_client_ethnic, df_rt_ethnic, by = "ClientUno") %>%
+   na.omit()%>%
+    mutate(
+      ethnicities = ifelse(grepl(",", ethnic_identity), "Mixed", ethnic_identity)
+    )
+    
+df_ethnic
+  
+
+df_ethnic %>%
+  ggplot(aes(x = ethnicities, y = response_time)) +
+  geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
 ```
