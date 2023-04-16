@@ -17,7 +17,7 @@ output:
 library(tidyverse)
 ```
 
-# Data Cleaning
+# Data Wrangling
 
 ```{r clean_data}
 # Fix data import by combining the transcript and time columns, then separate the columns back to the separate 
@@ -54,4 +54,10 @@ mega_df <- left_join(questionposts, questions, by = "QuestionUno") %>%
 # Remove rows if a state abbreviation is longer than two characters
 cleaned_df <- mega_df %>% 
   filter(nchar(StateAbbr) == 2)
+
+
+```
+
+```{r}
+
 ```
