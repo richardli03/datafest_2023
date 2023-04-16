@@ -1,4 +1,5 @@
 ---
+pppp---
 title: "Datafest"
 author: "Drew, Richard, Anmol, Meredith, An"
 date: 2023-4-7
@@ -9,17 +10,155 @@ output:
 
 # Question
 
-
 # Setup
+
 <!-- ----------------------------------------------------------------------- -->
 
 ```{r setup}
 library(tidyverse)
+library(stringr)
+library(maps)
+```
+
+```{r}
+theme_maps <- theme(legend.position="right",
+    axis.line=element_blank(),
+    axis.text=element_blank(),
+    axis.ticks=element_blank(),
+    axis.title=element_blank(),
+    panel.background=element_blank(),
+    panel.border=element_blank(),
+    panel.grid=element_blank()
+  )
 ```
 
 # Data Cleaning
 
 ```{r q1-task}
-## TODO: Give the filename for your copy of Table B01003
+clients <- "./data/clients.csv"
+questions <- "./data/questions.csv"
+questionposts <- "./data/questionposts.csv"
+statesites <- "./data/statesites.csv"
+
+df_questions <-
+  read_csv(
+    questions,
+  )
+df_statesites <- 
+  read_csv(
+    statesites
+  )
+df_questionposts <- 
+  read_csv(
+    questionposts
+  )
+df_clients <- 
+  read_csv(
+    clients
+  )
+colnames(df_statesites)
+df_questionposts
+```
+
+#### Statesites EDA:
+
+```{r}
+df_statesites %>% 
+  ggplot(aes(IncomeMultiplier, StateAbbr)) +
+  geom_point()
+```
+
+#### Clients EDA:
+
+```{r}
+df_clients_filtered <- df_clients %>% 
+  filter(!is.na(EthnicIdentity) & 
+           !is.na(Imprisoned) & 
+           Imprisoned != "NULL" & 
+           (EthnicIdentity == "African American"|EthnicIdentity == "Caucasian"|EthnicIdentity == "Latino or Hispanic")
+  )
+
+data_counts <- df_clients_filtered %>% 
+  group_by(EthnicIdentity, Imprisoned) %>% 
+  summarise(count = n()) %>%
+  mutate(percentage = count / sum(count))
+
+data_counts %>% 
+  pull(Imprisoned) %>% 
+  unique()
+
+data_counts %>% 
+  filter(Imprisoned == "Yes") %>% 
+  ggplot(aes(x = EthnicIdentity, y = percentage, fill = Imprisoned)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage imprisoned by Ethnicity", x = "Ethnicity", y = "Percentage Imprisoned") +
+  scale_fill_manual(values = c("Yes" = "red"))
+```
+
+```{r}
+df_clients_filtered_income <- df_clients %>% 
+  filter(!is.na(EthnicIdentity) & 
+           !is.na(AnnualIncome) &
+           !is.na(NumberInHousehold) &
+           AnnualIncome != "NULL" &
+           (EthnicIdentity == "African American"|EthnicIdentity == "Caucasian"|EthnicIdentity == "Latino or Hispanic")
+  )
+
+data_agg <- df_clients_filtered_income %>% 
+  filter(as.numeric(NumberInHousehold) < 10) %>%
+  group_by(EthnicIdentity) %>% 
+  summarise(total_income = sum(as.numeric(ifelse(AnnualIncome > 0, AnnualIncome, 0))),
+            total_people = sum(as.numeric(NumberInHousehold)),
+            count = sum(ifelse(AnnualIncome > 0, 1, 0))) %>% 
+  mutate(avg_income = total_income / count / total_people)
+
+data_agg %>%
+ggplot(aes(x = EthnicIdentity, y = avg_income)) +
+  geom_col() +
+  labs(title = "Average Annual Income by Ethnicity", x = "Ethnicity", y = "Average Annual Income")
+```
+
+```{r}
+# df_clients$CreatedUtc <- factor(format(as.Date(df_clients$CreatedUtc), "%Y"))
+
+df_clients_filtered_income <- df_clients %>% 
+  filter(!is.na(EthnicIdentity) & 
+           !is.na(AnnualIncome) &
+           !is.na(NumberInHousehold) &
+           AnnualIncome != "NULL" &
+           (EthnicIdentity == "African American"|EthnicIdentity == "Caucasian"|EthnicIdentity == "Latino or Hispanic")
+  )
+
+ggplot(df_clients_filtered_income, aes(x = CreatedUtc, group = EthnicIdentity, fill = EthnicIdentity)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Year", y = "Count of Clients", 
+       title = "Count of Clients by CreatedUtc and EthnicIdentity")
+```
+
+```{r}
+# create a data frame with state counts
+df_counts <- df_clients_filtered %>% 
+  group_by(StateName) %>% 
+  mutate(count = n())
+
+df_counts %>% pull(count)
+
+# get map data for states
+us_states <- map_data("state")
+
+us_states$region <- str_to_title(us_states$region)
+
+us_states
+df_counts
+# merge state data with count data
+merged_data <- left_join(us_states, df_counts, by = c("region" = "StateName"))
+merged_data
+
+# plot map with heat map layer
+ggplot(merged_data) +
+  geom_polygon(aes(x = long, y = lat, group = group, fill=count)) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  theme_void() +
+  labs(title = "Heat Map of Clients by State")
 
 ```
