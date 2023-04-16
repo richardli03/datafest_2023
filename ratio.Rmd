@@ -1,0 +1,189 @@
+---
+title: "Datafest"
+author: "Drew, Richard, Anmol, Meredith, An"
+date: 2023-4-7
+output:
+  github_document:
+    toc: true
+---
+
+# Question
+
+# Setup
+
+<!-- ----------------------------------------------------------------------- -->
+
+```{r setup}
+library(tidyverse)
+```
+
+# Initial Glimpse
+
+```{r initial_glimpse}
+df_attorneys <-read_csv("data/attorneys.csv") %>%
+  glimpse()
+
+df_attorney_time_entries <-read_csv("data/attorneytimeentries.csv") %>%
+  glimpse()
+
+state_sites <-read_csv("data/statesites.csv") %>%
+  glimpse()
+
+categories <-read_csv("data/categories.csv") %>%
+  glimpse()
+
+questions <-read_csv("data/questions.csv") %>%
+  mutate(
+    TakenOnUtc = if_else(
+      TakenOnUtc == "NULL",
+      AskedOnUtc + lubridate::years(1),
+      lubridate::ymd_hms(TakenOnUtc)
+    )
+  ) %>% 
+  glimpse()
+
+questionposts <-read_csv("data/questionposts.csv") %>%
+  glimpse()
+
+clients <-read_csv("data/clients.csv") %>%
+  glimpse()
+
+subcategories <-read_csv("data/subcategories.csv") %>%
+  glimpse()
+
+```
+
+# Some visualizations
+
+Raw number of attorneys per state
+
+```{r initial_glimpse}
+
+# clients %>%
+#   na.omit()%>%
+#   ggplot(aes(x =  StateName, y = AnnualIncome)) + 
+#   geom_boxplot()
+df_attorneys
+attorneys_count <- df_attorneys %>%
+  count(StateAbbr)
+
+attorneys_count %>%
+  ggplot(aes(x = StateAbbr, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Raw number of clients per state
+
+```{r}
+
+clients_count <- clients %>%
+  count(StateAbbr)
+
+clients_count %>%
+  ggplot(aes(x = StateAbbr, y = n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+```
+
+Ratio between client and attorney ratio:
+
+```{r}
+
+df1 <- attorneys_count %>% rename("Number of Attorneys" = "n")
+df2 <- clients_count %>% rename("Number of Clients" = "n")
+ratio <- dplyr::left_join(df1, df2) %>% 
+  mutate(
+    Ratio = `Number of Clients`/`Number of Attorneys`
+  ) %>% 
+  rename("State" = "StateAbbr")
+ratio %>% 
+  ggplot(aes(x = State, y = Ratio)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+# Response Times with Respect to State.
+
+```{r}
+
+# questions %>%
+#   glimpse()
+
+question_filtered <- questions %>%
+  filter(
+    str_detect(TakenOnUtc, "^2"),
+    str_detect(AskedOnUtc, "^2")
+  )
+
+question_filtered$TakenOnUtc <- as.POSIXct(question_filtered$TakenOnUtc, format = "%Y-%m-%d %H:%M:%S")
+question_filtered$AskedOnUtc <- as.POSIXct(question_filtered$AskedOnUtc, format = "%Y-%m-%d %H:%M:%S")
+
+# Replace missing values with a default datetime object -- UNNECESSARY, first filter catches all
+question_filtered$TakenOnUtc[is.na(question_filtered$TakenOnUtc)] <- as.POSIXct("1970-01-01 00:00:00", tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+question_filtered$AskedOnUtc[is.na(question_filtered$AskedOnUtc)] <- as.POSIXct("1970-01-01 00:00:00",  tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+
+# CLEAR VALUES THAT AREN'T FROM 2000s
+```
+
+```{r}
+df_response_t <- question_filtered %>%
+  mutate(
+    time_to_take = difftime(TakenOnUtc,AskedOnUtc, unit = "hours")
+  ) %>%
+  arrange(desc(time_to_take))
+
+df_simplified <- df_response_t %>%
+  summarize(
+    State = StateAbbr,
+    Asked_Time = AskedOnUtc,
+    Taken_Time = TakenOnUtc,
+    response_time = as.integer(time_to_take)
+  )
+
+
+df_simplified%>%
+  ggplot() + 
+  geom_boxplot(aes(x = State, y = response_time)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  scale_y_log10()
+```
+
+Let's also find how response time varies with number of posts.
+
+```{r}
+df_simplified 
+
+df_response_simplified_count <- df_simplified %>%
+  group_by(State) %>%
+  summarize(
+    num = n(),
+    med_rt = median(response_time),
+    mean_rt = mean(response_time)
+  )
+
+df_response_simplified_count %>% 
+  ggplot(aes(x = State, y = num, fill = mean_rt))+ 
+  geom_bar(stat = "identity")+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+df_response_simplified_count %>% 
+  ggplot(aes(x = State, y = mean_rt))+ 
+  geom_bar(stat = "identity")+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+df_merged = dplyr::left_join(df_response_simplified_count, ratio) 
+
+df_merged %>% 
+  ggplot(aes(x = Ratio, y = med_rt)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_point(stat = "identity") +
+  geom_point(
+    data = df_merged %>% filter(State %in% c("IN", "IL", "GA", "FL", "SC", "AK", "AZ")),
+    mapping = aes(color = State),
+    size = 2
+  ) 
+
+
+```
