@@ -22,11 +22,13 @@ library(tidyverse)
 ```{r clean_data}
 # Fix data import by combining the transcript and time columns, then separate the columns back to the separate 
 questionposts <- read_csv("data/questionposts.csv")
+questionposts
 questionposts_fixed <- questionposts %>% 
   unite(PostText, "PostText", "CreatedUtc") %>%
   mutate(CreatedUtc = str_sub(PostText, -20),
          PostText = str_sub(PostText, end = -21)) %>%
   mutate(CreatedUtc = str_replace(CreatedUtc, pattern = "_|\"|,", replacement = ""))
+questionposts_fixed
 ```
 
 ```{r join_data}
@@ -58,6 +60,11 @@ cleaned_df <- mega_df %>%
 
 ```
 
-```{r}
-
+```{r first_post_separation}
+first_post_df <- cleaned_df %>%
+  group_by(QuestionUno) %>%
+  arrange(CreatedUtc) %>%
+  distinct(QuestionUno, .keep_all = TRUE) %>%
+  arrange(QuestionUno) %>%
+  ungroup()
 ```
