@@ -1,0 +1,131 @@
+---
+title: "Datafest"
+author: "Drew, Richard, Anmol, Meredith, An"
+date: 2023-4-7
+output:
+  github_document:
+    toc: true
+---
+
+# Question
+
+What is the average time of response for a question? 
+
+# Setup
+
+<!-- ----------------------------------------------------------------------- -->
+
+```{r setup}
+library(tidyverse)
+```
+
+# Response Times with Respect to State.
+```{r}
+# questions %>%
+#   glimpse()
+
+question_filtered <- questions %>%
+  filter(
+    str_detect(TakenOnUtc, "^2"),
+    str_detect(AskedOnUtc, "^2")
+  )
+
+question_filtered$TakenOnUtc <- as.POSIXct(question_filtered$TakenOnUtc, format = "%Y-%m-%d %H:%M:%S")
+question_filtered$AskedOnUtc <- as.POSIXct(question_filtered$AskedOnUtc, format = "%Y-%m-%d %H:%M:%S")
+
+# Replace missing values with a default datetime object -- UNNECESSARY, first filter catches all
+question_filtered$TakenOnUtc[is.na(question_filtered$TakenOnUtc)] <- as.POSIXct("1970-01-01 00:00:00", tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+question_filtered$AskedOnUtc[is.na(question_filtered$AskedOnUtc)] <- as.POSIXct("1970-01-01 00:00:00",  tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+
+# CLEAR VALUES THAT AREN'T FROM 2000s
+```
+
+
+```{r}
+df_response_t <- question_filtered %>%
+  mutate(
+    time_to_take = difftime(TakenOnUtc,AskedOnUtc, unit = "hours")
+  ) %>%
+  arrange(desc(time_to_take))
+
+df_rt_state <- df_response_t %>%
+  summarize(
+    State = StateAbbr,
+    Asked_Time = AskedOnUtc,
+    Taken_Time = TakenOnUtc,
+    response_time = as.integer(time_to_take)
+  )
+
+
+df_rt_state%>%
+  ggplot() + 
+  geom_boxplot(aes(x = State, y = response_time)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  scale_y_log10()
+```
+
+Let's also find how response time varies with number of posts.
+
+```{r}
+df_rt_state 
+
+df_response_simplified_count <- df_rt_state %>%
+  group_by(State) %>%
+  summarize(
+    num = n(),
+    med_rt = median(response_time),
+    mean_rt = mean(response_time)
+  )
+
+df_response_simplified_count
+
+# BAR GRAPH IT
+df_response_simplified_count %>%
+  ggplot(aes(x = State, y = num, fill = med_rt))+
+  geom_bar(stat = "identity")+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+## SCATTER PLOT IT
+df_response_simplified_count %>%
+  ggplot(aes(x = num, y = med_rt)) +
+  geom_point()
+
+```
+
+
+# ETHNICITY
+
+```{r}
+
+df_client_ethnic <- clients %>%
+  summarize(
+    ethnic_identity = EthnicIdentity,
+    "ClientUno" = ClientUno
+  ) %>%
+  glimpse()
+
+df_rt_ethnic <- df_response_t %>%
+  summarize(
+    "ClientUno" = AskedByClientUno,
+    Asked_Time = AskedOnUtc,
+    Taken_Time = TakenOnUtc,
+    response_time = as.integer(time_to_take)
+  ) %>% 
+  glimpse()
+
+df_ethnic <- inner_join(df_client_ethnic, df_rt_ethnic, by = "ClientUno") %>%
+   na.omit()%>%
+    mutate(
+      ethnicities = ifelse(grepl(",", ethnic_identity), "Mixed", ethnic_identity)
+    )
+    
+df_ethnic
+  
+
+df_ethnic %>%
+  ggplot(aes(x = ethnicities, y = response_time)) +
+  geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```

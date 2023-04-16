@@ -1,0 +1,66 @@
+---
+title: "WTF is GOING ON WITH SOUTH CAROLINA?"
+author: "Drew, Richard, Anmol, Meredith, An"
+date: 2023-4-7
+output:
+  github_document:
+    toc: true
+---
+
+# Question
+
+what is south carolina doin man? 
+
+# Setup
+
+<!-- ----------------------------------------------------------------------- -->
+
+```{r setup}
+library(tidyverse)
+```
+
+# Finding South Carolina
+
+```{r}
+sc_attorneys_count <- df_attorneys %>%
+  filter(
+    StateAbbr == "SC"
+  ) %>%
+  count(County, name = "attorneys")
+
+sc_clients_count <- clients %>%
+  filter(
+    StateAbbr == "SC"
+  ) %>%
+  count(County,name =  "clients")
+
+full_df <- right_join(sc_attorneys_count, sc_clients_count, by = "County") %>%
+  replace_na() %>%
+  glimpse()
+
+```
+
+
+# Separating by County
+Trying to separate by County -- it doesn't really matter. 
+```{r}
+full_df %>%
+  ggplot(aes(x = County)) + 
+  geom_bar(aes(y = attorneys, fill = "attorneys"), stat = "identity", position = "dodge") +
+  # scale_fill_manual(values = c("red", "blue"), name = "") + 
+  xlab("County") + 
+  ylab("Number of Attorneys") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  ggtitle("Number of Attorneys and Clients per County")
+
+full_df %>%
+  ggplot(aes(x = County)) +
+  geom_bar(aes(y = clients, fill = "clients"), stat = "identity", position = "dodge") + 
+  # scale_fill_manual(values = c("red", "blue"), name = "") + 
+  xlab("County") + 
+  ylab("Number of Clients") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  ggtitle("Number of Attorneys and Clients per County")
+```
+
+# Separating by Ethnic Identity
