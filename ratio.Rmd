@@ -15,6 +15,7 @@ output:
 
 ```{r setup}
 library(tidyverse)
+library(usmap)
 ```
 
 # Initial Glimpse
@@ -149,6 +150,35 @@ df_simplified%>%
   geom_boxplot(aes(x = State, y = response_time)) + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
   scale_y_log10()
+```
+
+Response times map plot
+
+```{r}
+# get map data for states
+us_states_abbr <- usmapdata::centroid_labels("states")
+
+# get map data for states
+us_states <- map_data("state")
+
+
+us_states <- us_states %>% 
+  mutate(region = str_to_title(region))
+
+us_states <- left_join(us_states_abbr, us_states, by = c("full" = "region"))
+
+df_simplified <- slice(df_simplified, 1:100)
+
+# merge state data with count data
+merged_data <- left_join(us_states, df_simplified, by = c("abbr" = "State"))
+
+# # plot map with heat map layer
+merged_data %>% 
+  ggplot() +
+    geom_polygon(aes(x = long, y = lat, group = group, fill=response_time)) +
+    scale_fill_gradient(low = "blue", high = "red") +
+    theme_void() +
+    labs(title = "Heat Map of Clients by State")
 ```
 
 Let's also find how response time varies with number of posts.
