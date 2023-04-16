@@ -150,6 +150,10 @@ df_simplified%>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
   scale_y_log10()
 ```
+The states whose response time mean is NULL, as indicated with adding a year to the start time, is AZ, CA, GA, IA, ID, KS, PA, SD, and US.
+ID only has NULL response times. 
+
+
 
 Let's also find how response time varies with number of posts.
 
@@ -180,10 +184,18 @@ df_merged %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   geom_point(stat = "identity") +
   geom_point(
-    data = df_merged %>% filter(State %in% c("IN", "IL", "GA", "FL", "SC", "AK", "AZ")),
+    data = df_merged %>% filter(State %in% c("IN", "IL", "GA", "FL", "SC", "AK", "AZ", "KS", "PA", "CA", "IA", "ID", "US")),
     mapping = aes(color = State),
     size = 2
-  ) 
+  ) + 
+  ggtitle("Median response time vs. Ratio (clients/attorneys) with Median NULL States")
+  
 
+df_merged %>% 
+  filter(med_rt < 5000) %>% 
+  ggplot(aes(x = Ratio, y = med_rt)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_point(stat = "identity")  + 
+  ggtitle("Median response time vs. Ratio (clients/attorneys) without Median NULL States")
 
 ```
