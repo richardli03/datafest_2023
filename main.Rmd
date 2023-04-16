@@ -45,8 +45,44 @@ subcategories <-read_csv("data/subcategories.csv") %>%
   glimpse()
 
 ```
+```{r clean_data}
+# Fix data import by combining the transcript and time columns, then separate the columns back to the separate 
+questionposts <- read_csv("data/questionposts.csv")
+questionposts_fixed <- questionposts %>% 
+  unite(PostText, "PostText", "CreatedUtc") %>%
+  mutate(CreatedUtc = str_sub(PostText, -20),
+         PostText = str_sub(PostText, end = -21)) %>%
+  mutate(CreatedUtc = str_replace(CreatedUtc, pattern = "_|\"|,", replacement = ""))
+```
 
+```{r join_data}
+# Combine four relevent datasets for easier analysis
+
+# Read in the csv file as a dataframe
+questions <- read_csv("data/questions.csv")
+clients <- read_csv("data/clients.csv")
+attorneys <- read_csv("data/attorneys.csv")
+
+# Join the two dataframes by the common column "QuestionUNO"
+mega_df <- left_join(questionposts, questions, by = "QuestionUno") %>% 
+  left_join(clients, by = c("AskedByClientUno" = "ClientUno")) %>% 
+  left_join(attorneys, by = c("TakenByAttorneyUno" = "AttorneyUno")) %>% 
+  select(c("StateAbbr.x", "QuestionUno", "PostText", "CreatedUtc.x", "Category",
+           "Subcategory", "AskedByClientUno", "AskedOnUtc", 
+           "TakenByAttorneyUno", "TakenOnUtc", "ClosedByAttorneyUno", 
+           "ClosedOnUtc", "LegalDeadline", "County.x", "EthnicIdentity", "Age",
+           "Gender", "MaritalStatus", "Veteran", "Imprisoned", 
+           "NumberInHousehold", "AnnualIncome", "AllowedIncome", 
+           "CheckingBalance", "SavingsBalance", "InvestmentsBalance")) %>% 
+  rename("StateAbbr" = "StateAbbr.x", "County" = "County.x", 
+         "CreatedUtc" = "CreatedUtc.x")
+
+# Remove rows if a state abbreviation is longer than two characters
+cleaned_df <- mega_df %>% 
+  filter(nchar(StateAbbr) == 2)
+```
 # Some visualizations
+
 
 Raw number of attorneys per state
 
@@ -159,8 +195,4 @@ ethnic_identity %>%
 
 ```
 
-```{r}
 
-
-
-```

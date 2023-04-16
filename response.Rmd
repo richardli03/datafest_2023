@@ -9,7 +9,7 @@ output:
 
 # Question
 
-What is the average time of response for a question plot? 
+What is the average time of response for a question? 
 
 # Setup
 
@@ -21,7 +21,6 @@ library(tidyverse)
 
 # Response Times with Respect to State.
 ```{r}
-
 # questions %>%
 #   glimpse()
 
@@ -41,6 +40,7 @@ question_filtered$AskedOnUtc[is.na(question_filtered$AskedOnUtc)] <- as.POSIXct(
 # CLEAR VALUES THAT AREN'T FROM 2000s
 ```
 
+
 ```{r}
 df_response_t <- question_filtered %>%
   mutate(
@@ -48,7 +48,7 @@ df_response_t <- question_filtered %>%
   ) %>%
   arrange(desc(time_to_take))
 
-df_simplified <- df_response_t %>%
+df_rt_state <- df_response_t %>%
   summarize(
     State = StateAbbr,
     Asked_Time = AskedOnUtc,
@@ -57,7 +57,7 @@ df_simplified <- df_response_t %>%
   )
 
 
-df_simplified%>%
+df_rt_state%>%
   ggplot() + 
   geom_boxplot(aes(x = State, y = response_time)) + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
@@ -67,9 +67,9 @@ df_simplified%>%
 Let's also find how response time varies with number of posts.
 
 ```{r}
-df_simplified 
+df_rt_state 
 
-df_response_simplified_count <- df_simplified %>%
+df_response_simplified_count <- df_rt_state %>%
   group_by(State) %>%
   summarize(
     num = n(),
@@ -79,10 +79,53 @@ df_response_simplified_count <- df_simplified %>%
 
 df_response_simplified_count
 
-  
+# BAR GRAPH IT
 df_response_simplified_count %>%
-  ggplot(aes(x = State, y = num, fill = mean_rt))+
+  ggplot(aes(x = State, y = num, fill = med_rt))+
   geom_bar(stat = "identity")+ 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+## SCATTER PLOT IT
+df_response_simplified_count %>%
+  ggplot(aes(x = num, y = med_rt)) +
+  geom_point()
+
+```
+
+
+# ETHNICITY
+
+```{r}
+
+df_client_ethnic <- clients %>%
+  summarize(
+    ethnic_identity = EthnicIdentity,
+    "ClientUno" = ClientUno
+  ) %>%
+  glimpse()
+
+df_rt_ethnic <- df_response_t %>%
+  summarize(
+    "ClientUno" = AskedByClientUno,
+    Asked_Time = AskedOnUtc,
+    Taken_Time = TakenOnUtc,
+    response_time = as.integer(time_to_take)
+  ) %>% 
+  glimpse()
+
+df_ethnic <- inner_join(df_client_ethnic, df_rt_ethnic, by = "ClientUno") %>%
+   na.omit()%>%
+    mutate(
+      ethnicities = ifelse(grepl(",", ethnic_identity), "Mixed", ethnic_identity)
+    )
+    
+df_ethnic
+  
+
+df_ethnic %>%
+  ggplot(aes(x = ethnicities, y = response_time)) +
+  geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
 ```
