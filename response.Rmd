@@ -24,27 +24,28 @@ library(tidyverse)
 # questions %>%
 #   glimpse()
 
-question_filtered <- questions %>%
+questions_filtered <- questions %>%
   filter(
-    str_detect(TakenOnUtc, "^2"),
-    str_detect(AskedOnUtc, "^2")
+    str_detect(AskedOnUtc, "^2"), 
+    str_detect(ClosedOnUtc, "^2")
   )
 
-question_filtered$TakenOnUtc <- as.POSIXct(question_filtered$TakenOnUtc, format = "%Y-%m-%d %H:%M:%S")
-question_filtered$AskedOnUtc <- as.POSIXct(question_filtered$AskedOnUtc, format = "%Y-%m-%d %H:%M:%S")
+questions_filtered$TakenOnUtc <- as.POSIXct(questions_filtered$TakenOnUtc, format = "%Y-%m-%d %H:%M:%S")
+questions_filtered$AskedOnUtc <- as.POSIXct(questions_filtered$AskedOnUtc, format = "%Y-%m-%d %H:%M:%S")
+questions_filtered$ClosedOnUtc <- as.POSIXct(questions_filtered$ClosedOnUtc, format = "%Y-%m-%d %H:%M:%S")
 
-# Replace missing values with a default datetime object -- UNNECESSARY, first filter catches all
-question_filtered$TakenOnUtc[is.na(question_filtered$TakenOnUtc)] <- as.POSIXct("1970-01-01 00:00:00", tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
-question_filtered$AskedOnUtc[is.na(question_filtered$AskedOnUtc)] <- as.POSIXct("1970-01-01 00:00:00",  tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
 
 # CLEAR VALUES THAT AREN'T FROM 2000s
 ```
 
 
 ```{r}
-df_response_t <- question_filtered %>%
+
+
+df_response_t <- questions_filtered %>%
   mutate(
-    time_to_take = difftime(TakenOnUtc,AskedOnUtc, unit = "hours")
+    ResolvedOnUtc = if_else(is.na(TakenOnUtc), ClosedOnUtc, TakenOnUtc),
+    time_to_take = difftime(ResolvedOnUtc,AskedOnUtc, unit = "hours") - 4
   ) %>%
   arrange(desc(time_to_take))
 

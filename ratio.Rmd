@@ -129,11 +129,6 @@ question_filtered$AskedOnUtc[is.na(question_filtered$AskedOnUtc)] <- as.POSIXct(
 ```
 
 ```{r}
-df_response_t <- question_filtered %>%
-  mutate(
-    time_to_take = difftime(TakenOnUtc,AskedOnUtc, unit = "hours")
-  ) %>%
-  arrange(desc(time_to_take))
 
 df_simplified <- df_response_t %>%
   summarize(

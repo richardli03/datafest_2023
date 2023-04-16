@@ -208,7 +208,7 @@ questionposts_fixed <- questionposts %>%
 ```
 
 ```{r join_data}
-# Combine four relevent datasets for easier analysis
+# Combine four relevant datasets for easier analysis
 
 # Read in the csv file as a dataframe
 questions <- read_csv("data/questions.csv")
@@ -216,7 +216,7 @@ clients <- read_csv("data/clients.csv")
 attorneys <- read_csv("data/attorneys.csv")
 
 # Join the two dataframes by the common column "QuestionUNO"
-mega_df <- left_join(questionposts, questions, by = "QuestionUno") %>% 
+mega_df <- left_join(questionposts_fixed, questions, by = "QuestionUno") %>% 
   left_join(clients, by = c("AskedByClientUno" = "ClientUno")) %>% 
   left_join(attorneys, by = c("TakenByAttorneyUno" = "AttorneyUno")) %>% 
   select(c("StateAbbr.x", "QuestionUno", "PostText", "CreatedUtc.x", "Category",
@@ -232,4 +232,5 @@ mega_df <- left_join(questionposts, questions, by = "QuestionUno") %>%
 # Remove rows if a state abbreviation is longer than two characters
 cleaned_df <- mega_df %>% 
   filter(nchar(StateAbbr) == 2)
+
 ```
