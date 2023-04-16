@@ -139,26 +139,23 @@ ggplot(df_clients_filtered_income, aes(x = CreatedUtc, group = EthnicIdentity, f
 # create a data frame with state counts
 df_counts <- df_clients_filtered %>% 
   group_by(StateName) %>% 
-  mutate(count = n())
-
-df_counts %>% pull(count)
+  summarize(count = n())
 
 # get map data for states
 us_states <- map_data("state")
 
-us_states$region <- str_to_title(us_states$region)
+us_states <- us_states %>% 
+  mutate(region = str_to_title(region))
 
-us_states
-df_counts
 # merge state data with count data
 merged_data <- left_join(us_states, df_counts, by = c("region" = "StateName"))
-merged_data
 
-# plot map with heat map layer
-ggplot(merged_data) +
-  geom_polygon(aes(x = long, y = lat, group = group, fill=count)) +
-  scale_fill_gradient(low = "blue", high = "red") +
-  theme_void() +
-  labs(title = "Heat Map of Clients by State")
+# # plot map with heat map layer
+merged_data %>% 
+  ggplot() +
+    geom_polygon(aes(x = long, y = lat, group = group, fill=count)) +
+    scale_fill_gradient(low = "blue", high = "red") +
+    theme_void() +
+    labs(title = "Heat Map of Clients by State")
 
 ```
