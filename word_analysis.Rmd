@@ -1,0 +1,50 @@
+---
+title: "Word Clouds File"
+output: html_document
+date: "2023-04-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Without any filtering
+
+```{r full dataset}
+posts <- cleaned_df %>% 
+  select("PostText", "QuestionUno") 
+
+words <- posts %>% 
+  unnest_tokens("word", "PostText") %>% 
+  dplyr::count(word, sort = TRUE) %>% 
+  ungroup()
+
+data("stop_words")
+words_clean <- words %>%
+  anti_join(stop_words)
+
+words_clean %>% head(10)
+
+words_clean %>% 
+  with(wordcloud(word, n, random.order = FALSE, max.words = 50))
+```
+
+## Response Time Grouping
+
+```{r setup-response-t, echo=FALSE}
+just_df_response_t <- df_response_t %>% 
+  select("QuestionUno", "time_to_take")
+
+cleaned_time_df <- cleaned_df %>% 
+  left_join(just_df_response_t)
+```
+
+```{r group-response-time, echo=FALSE}
+cleaned_time_df <- cleaned_time_df %>% 
+  mutate(time_period = floor(time_to_take/12))
+
+cleaned_time_df %>% 
+  group_by(time_period) %>% 
+  unnest_tokens("word", PostText) %>% 
+  dplyr::count(word, sort = TRUE) %>%
+```
