@@ -11,6 +11,9 @@ output:
 
 ```{r setup}
 library(tidyverse)
+library(tidytext) # for NLP
+library(wordcloud) # to render wordclouds
+
 ```
 
 # **CONTEXT + OUR QUESTION**
@@ -23,6 +26,33 @@ Our source for this project was the American Bar Association which, as an organi
 
 Finally, this data is not a sample, at least to our knowledge. It appears to be a dataset describing the population of people seeking pro-bono legal help. As a result, we don't need to make any confidence intervals. There's no estimation occurring because we're merely trying to identify trends in the population at large. Our results directly indicate which words DO result in an increased response time.
 
+```{r join_data}
+# Combine four relevent datasets for easier analysis
+
+# Read in the csv file as a dataframe
+questions <- read_csv("data/questions.csv")
+clients <- read_csv("data/clients.csv")
+attorneys <- read_csv("data/attorneys.csv")
+
+# Join the two dataframes by the common column "QuestionUNO"
+mega_df <- left_join(questionposts, questions, by = "QuestionUno") %>% 
+  left_join(clients, by = c("AskedByClientUno" = "ClientUno")) %>% 
+  left_join(attorneys, by = c("TakenByAttorneyUno" = "AttorneyUno")) %>% 
+  select(c("StateAbbr.x", "QuestionUno", "PostText", "CreatedUtc.x", "Category",
+           "Subcategory", "AskedByClientUno", "AskedOnUtc", 
+           "TakenByAttorneyUno", "TakenOnUtc", "ClosedByAttorneyUno", 
+           "ClosedOnUtc", "LegalDeadline", "County.x", "EthnicIdentity", "Age",
+           "Gender", "MaritalStatus", "Veteran", "Imprisoned", 
+           "NumberInHousehold", "AnnualIncome", "AllowedIncome", 
+           "CheckingBalance", "SavingsBalance", "InvestmentsBalance")) %>% 
+  rename("StateAbbr" = "StateAbbr.x", "County" = "County.x", 
+         "CreatedUtc" = "CreatedUtc.x")
+
+# Remove rows if a state abbreviation is longer than two characters
+cleaned_df <- mega_df %>% 
+  filter(nchar(StateAbbr) == 2)
+```
+
 ```{r clean_data}
 # Fix data import by combining the transcript and time columns, then separate the columns back to the separate 
 questionposts <- read_csv("data/questionposts.csv")
@@ -31,6 +61,47 @@ questionposts_fixed <- questionposts %>%
   mutate(CreatedUtc = str_sub(PostText, -20),
          PostText = str_sub(PostText, end = -21)) %>%
   mutate(CreatedUtc = str_replace(CreatedUtc, pattern = "_|\"|,", replacement = ""))
+
+first_post_df <- cleaned_df %>%
+  group_by(QuestionUno) %>%
+  arrange(CreatedUtc) %>%
+  distinct(QuestionUno, .keep_all = TRUE) %>%
+  arrange(QuestionUno) %>%
+  ungroup()
+
+```
+
+```{r}
+df_attorneys <-read_csv("data/attorneys.csv") %>%
+  glimpse()
+
+df_attorney_time_entries <-read_csv("data/attorneytimeentries.csv") %>%
+  glimpse()
+
+state_sites <-read_csv("data/statesites.csv") %>%
+  glimpse()
+
+categories <-read_csv("data/categories.csv") %>%
+  glimpse()
+
+questions <-read_csv("data/questions.csv") %>%
+  mutate(
+    TakenOnUtc = if_else(
+      TakenOnUtc == "NULL",
+      AskedOnUtc + lubridate::years(1),
+      lubridate::ymd_hms(TakenOnUtc)
+    )
+  ) %>% 
+  glimpse()
+
+questionposts <-read_csv("data/questionposts.csv") %>%
+  glimpse()
+
+clients <-read_csv("data/clients.csv") %>%
+  glimpse()
+
+subcategories <-read_csv("data/subcategories.csv") %>%
+  glimpse()
 ```
 
 # **PROCEDURE**
@@ -49,10 +120,77 @@ To do real data processing on the rate at which questions were answered, we isol
 
 For our final graph, we sorted all of the posts by the number of days it took to get a response, before totalling the words in that group of posts, and then comparing. The frequency of each of the 10 words that have the most impact on the response time are shown on the final graph(with reference to the number of words total for that time period). 
 
-```{r full dataset}
-posts <- cleaned_df %>% 
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+## Without any filtering
+
+posts <- first_post_df %>% 
+  filter(Category == "Housing and Homelessness") %>% 
   select("PostText", "QuestionUno") 
 
+words <- posts %>%
+  unnest_tokens("word", "PostText") %>% 
+  dplyr::count(word, sort = TRUE) %>% 
+  ungroup()
+
+data("stop_words")
+words_clean <- words %>%
+  anti_join(stop_words)
+
+words_clean %>% head(10)
+
+words_clean %>% 
+  with(wordcloud(word, n, random.order = FALSE, max.words = 50))
+
+
+## Response Time Grouping
+
+just_df_response_t <- df_response_t %>% 
+  select("QuestionUno", "time_to_take")
+
+cleaned_time_df <- cleaned_df %>% 
+  left_join(just_df_response_t)
+
+
+cleaned_time_df <- cleaned_time_df %>% 
+  mutate(time_period = floor(time_to_take/24))
+
+tokened_words <- cleaned_time_df %>% 
+  group_by(time_period) %>% 
+  unnest_tokens("word", PostText) %>% 
+  dplyr::count(word, sort = TRUE) %>% 
+  filter(!word %in% stop_words$word)
+
+biggest_diff_list <- tokened_words %>% 
+  group_by(time_period) %>% 
+  mutate(sum = sum(n), ratio = n/sum) %>% 
+  filter(time_period == 0|time_period == 50) %>% 
+  group_by(word) %>% 
+  mutate(diff = max(ratio) - min(ratio)) %>% 
+  arrange(desc(diff)) %>% 
+  filter(time_period == 0) %>% 
+  ungroup() %>% 
+  slice_head(n = 10)
+
+
+
+```
+
+```{r}
+tokened_words %>% 
+    filter(word %in% biggest_diff_list$word, 
+           time_period <= 50) %>% 
+  group_by(time_period) %>% 
+  mutate(sum = sum(n), ratio = n/sum) %>% 
+  arrange(time_period) %>% 
+  ggplot() +
+  geom_line(aes(time_period, ratio, color = word))
+```
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE)
 words <- posts %>% 
   unnest_tokens("word", "PostText") %>% 
   dplyr::count(word, sort = TRUE) %>% 
@@ -66,6 +204,31 @@ words_clean %>% head(10)
 
 words_clean %>% 
   with(wordcloud(word, n, random.order = FALSE, max.words = 50))
+
+```
+
+```{r}
+df_response_t <- questions_filtered %>%
+  mutate(
+    ResolvedOnUtc = if_else(is.na(TakenOnUtc), ClosedOnUtc, TakenOnUtc),
+    time_to_take = difftime(ResolvedOnUtc,AskedOnUtc, unit = "hours") - 4
+  ) %>%
+  arrange(desc(time_to_take))
+
+df_rt_state <- df_response_t %>%
+  summarize(
+    State = StateAbbr,
+    Asked_Time = AskedOnUtc,
+    Taken_Time = TakenOnUtc,
+    response_time = as.integer(time_to_take)
+  )
+
+
+df_rt_state%>%
+  ggplot() + 
+  geom_boxplot(aes(x = State, y = response_time)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  scale_y_log10()
 ```
 
 # **CONFIDENCE IN OUR RESULTS**

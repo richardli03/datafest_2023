@@ -12,14 +12,14 @@ library(tidyr)
 library(data.table)
 
 # Read in the csv file as a dataframe
-questionposts <- read.csv("~/Olin/Data Science/datafest_2023/data/questionposts.csv")
+questionposts <- read.csv("./data/questionposts.csv")
 
 # Read in the second dataframe
-questions <- read.csv("~/Olin/Data Science/datafest_2023/data/questions.csv")
+questions <- read.csv("./data/questions.csv")
 
-clients <- read.csv("~/Olin/Data Science/datafest_2023/data/clients.csv")
+clients <- read.csv("./data/clients.csv")
 
-attorneys <- read.csv("~/Olin/Data Science/datafest_2023/data/attorneys.csv")
+attorneys <- read.csv("./data/attorneys.csv")
 
 # Join the two dataframes by the common column "QuestionUNO"
 mega_df <- left_join(questionposts, questions, by = "QuestionUno") %>% 
