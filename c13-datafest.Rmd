@@ -11,6 +11,9 @@ output:
 
 ```{r setup}
 library(tidyverse)
+library(tidytext) # for NLP
+library(wordcloud) # to render wordclouds
+
 ```
 
 # **CONTEXT + OUR QUESTION**
@@ -50,6 +53,69 @@ To do real data processing on the rate at which questions were answered, we isol
 For our final graph, we sorted all of the posts by the number of days it took to get a response, before totalling the words in that group of posts, and then comparing. The frequency of each of the 10 words that have the most impact on the response time are shown on the final graph(with reference to the number of words total for that time period). 
 
 ```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+## Without any filtering
+
+posts <- first_post_df %>% 
+  filter(Category == "Housing and Homelessness") %>% 
+  select("PostText", "QuestionUno") 
+
+words <- posts %>%
+  unnest_tokens("word", "PostText") %>% 
+  dplyr::count(word, sort = TRUE) %>% 
+  ungroup()
+
+data("stop_words")
+words_clean <- words %>%
+  anti_join(stop_words)
+
+words_clean %>% head(10)
+
+words_clean %>% 
+  with(wordcloud(word, n, random.order = FALSE, max.words = 50))
+
+
+## Response Time Grouping
+
+just_df_response_t <- df_response_t %>% 
+  select("QuestionUno", "time_to_take")
+
+cleaned_time_df <- cleaned_df %>% 
+  left_join(just_df_response_t)
+
+
+cleaned_time_df <- cleaned_time_df %>% 
+  mutate(time_period = floor(time_to_take/24))
+
+tokened_words <- cleaned_time_df %>% 
+  group_by(time_period) %>% 
+  unnest_tokens("word", PostText) %>% 
+  dplyr::count(word, sort = TRUE) %>% 
+  filter(!word %in% stop_words$word)
+
+biggest_diff_list <- tokened_words %>% 
+  group_by(time_period) %>% 
+  mutate(sum = sum(n), ratio = n/sum) %>% 
+  filter(time_period == 0|time_period == 50) %>% 
+  group_by(word) %>% 
+  mutate(diff = max(ratio) - min(ratio)) %>% 
+  arrange(desc(diff)) %>% 
+  filter(time_period == 0) %>% 
+  ungroup() %>% 
+  slice_head(n = 10)
+
+tokened_words %>% 
+    filter(word %in% biggest_diff_list$word, 
+           time_period <= 50) %>% 
+  group_by(time_period) %>% 
+  mutate(sum = sum(n), ratio = n/sum) %>% 
+  arrange(time_period) %>% 
+  ggplot() +
+  geom_line(aes(time_period, ratio, color = word))
+
+
 
 ```
 
